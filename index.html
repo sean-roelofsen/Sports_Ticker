@@ -1,0 +1,1304 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sports Ticker</title>
+
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style>
+:root{
+  --size: 10vw;
+  --halo: #00ff4c;
+
+  /* Bills strobe look */
+  --favGlow: #2f6cff;
+  --favGlow2:#ff2f2f;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: black;
+  overflow: hidden;
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  color: #fff;
+  font-family: Arial Black, Impact, Arial, sans-serif;
+}
+
+/* ---------- TITLE BAR ---------- */
+.titleBar{
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 70px; /* leaves room for the hamburger on the left */
+  box-sizing: border-box;
+
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.titleText{
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-align: center;
+
+  color: #fff;
+  text-shadow:
+    0 0 6px  var(--halo),
+    0 0 14px var(--halo),
+    0 0 28px color-mix(in srgb, var(--halo) 85%, transparent),
+    0 0 48px color-mix(in srgb, var(--halo) 60%, transparent);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* --- TICKER LAYOUT --- */
+.tickerWrap{
+  position: absolute;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  display: none; /* JS will show/hide */
+}
+
+/* row anchor (pushed down under title bar) */
+.tickerWrap.row1{ top: 72px; }
+.tickerWrap.row2{ top: calc(72px + (var(--size) * 1.55)); }
+.tickerWrap.row3{ top: calc(72px + (var(--size) * 1.55 * 2)); }
+
+/* subtle separators between rows */
+.tickerWrap.row2,
+.tickerWrap.row3{
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+
+/* --- continuous ticker track --- */
+.tickerTrack{
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  animation-name: marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-duration: 20s; /* set by JS */
+
+  transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.tickerItem{
+  display: inline-block;
+  padding-right: 4vw;
+  font-size: var(--size);
+  font-weight: 900;
+  letter-spacing: 2px;
+
+  text-shadow:
+    0 0 6px  var(--halo),
+    0 0 14px var(--halo),
+    0 0 28px color-mix(in srgb, var(--halo) 85%, transparent),
+    0 0 48px color-mix(in srgb, var(--halo) 60%, transparent);
+}
+
+.divider{
+  display: inline-block;
+  margin: 0 0.20em;
+  font-size: 1.0em;
+  font-weight: 900;
+
+  color: rgba(255,255,255,0.95);
+
+  text-shadow:
+    0 0 4px rgba(255,255,255,0.35),
+    0 0 10px color-mix(in srgb, var(--halo) 35%, transparent);
+
+  filter: none;
+}
+  
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.15); }
+}
+
+.divider{
+  animation: dotPulse 2.8s ease-in-out infinite;
+}
+  
+/* Team logo styling */
+.teamLogo{
+  height: 1.25em;
+  width: 1.25em;
+  object-fit: contain;
+
+  max-height: 1.25em;
+  display: inline-block;
+  vertical-align: -0.18em;
+  margin: 0 0.32em 0 0.14em;
+
+  filter:
+    drop-shadow(0 0 2px rgba(0,0,0,0.85))
+    drop-shadow(0 0 6px var(--halo))
+    drop-shadow(0 0 14px var(--halo))
+    drop-shadow(0 0 26px color-mix(in srgb, var(--halo) 70%, transparent));
+}
+
+/* ---------- FAVORITE TEAM STROBE (BUF) ---------- */
+.favStrobe{
+  display: inline-block;
+  animation: favStrobe 900ms linear 8;
+  will-change: filter, text-shadow, opacity;
+}
+
+.favStrobe,
+.favStrobe .teamLogo{
+  text-shadow:
+    0 0 8px  var(--favGlow),
+    0 0 20px var(--favGlow),
+    0 0 36px color-mix(in srgb, var(--favGlow) 70%, transparent);
+  filter:
+    drop-shadow(0 0 2px rgba(0,0,0,0.90))
+    drop-shadow(0 0 10px var(--favGlow))
+    drop-shadow(0 0 22px color-mix(in srgb, var(--favGlow) 70%, transparent));
+}
+
+@keyframes favStrobe{
+  0%, 6%, 12%, 18%, 24%, 30%, 36%, 42%, 48%, 54%, 60%, 66%, 72%, 78%, 84%, 90%, 96%, 100% {
+    opacity: 1;
+    filter: brightness(1.0) saturate(1.1);
+  }
+  3%, 15%, 27%, 39%, 51%, 63%, 75%, 87%, 99% {
+    opacity: 0.25;
+    filter: brightness(2.2) saturate(1.6);
+  }
+}
+
+.favStrobe .teamLogo{
+  height: 1.38em;
+  width: 1.38em;
+  max-height: 1.38em;
+  vertical-align: -0.20em;
+}
+
+/* marquee */
+@keyframes marquee {
+  from { transform: translate3d(0,0,0); }
+  to   { transform: translate3d(-50%,0,0); }
+}
+
+@supports not (color-mix(in srgb, #fff 50%, transparent)) {
+  .tickerItem,
+  .titleText {
+    text-shadow:
+      0 0 6px  var(--halo),
+      0 0 14px var(--halo),
+      0 0 28px var(--halo),
+      0 0 48px var(--halo);
+  }
+  .teamLogo{
+    filter:
+      drop-shadow(0 0 2px rgba(0,0,0,0.85))
+      drop-shadow(0 0 6px var(--halo))
+      drop-shadow(0 0 14px var(--halo))
+      drop-shadow(0 0 26px var(--halo));
+  }
+}
+
+/* ---------- Hamburger (auto-hide) ---------- */
+.controls {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 9999;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+}
+.controls.show { opacity: 1; pointer-events: auto; }
+
+.menu-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.60);
+  color: #fff;
+
+  display: grid;
+  place-items: center;
+
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Panel + scrim */
+.panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9998;
+
+  width: min(460px, 94vw);
+  height: 100vh;
+
+  background: rgba(0,0,0,0.88);
+  border-right: 1px solid rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+
+  transform: translateX(-105%);
+  transition: transform 200ms ease;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 14px 16px 0;
+  box-sizing: border-box;
+}
+.panel.open { transform: translateX(0); }
+
+.scrim{
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  background: rgba(0,0,0,0.35);
+  display: none;
+}
+.scrim.show{ display:block; }
+
+.panel-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 6px 0 10px;
+  flex: 0 0 auto;
+}
+
+.panel-title{
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.close-btn{
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.60);
+  color: #fff;
+  display:grid;
+  place-items:center;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* scrolling body area inside the panel */
+.panel-body{
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 calc(22px + env(safe-area-inset-bottom));
+}
+
+/* ---- controls layout ---- */
+.control { margin: 16px 0 18px; }
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.value {
+  font-size: 13px;
+  opacity: 0.8;
+  font-weight: 700;
+}
+
+input[type="range"]{
+  width: 100%;
+  accent-color: var(--halo);
+}
+
+.small {
+  font-size: 12px;
+  opacity: 0.75;
+  line-height: 1.35;
+  margin-top: 8px;
+  word-break: break-word;
+}
+
+.checks {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 800;
+}
+.check input { transform: scale(1.25); }
+
+.btn-row{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+.btn{
+  flex: 1;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.60);
+  color:#fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.color-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.color-input{
+  width: 64px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.60);
+  padding: 2px;
+}
+.color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.color-input::-webkit-color-swatch { border: none; border-radius: 10px; }
+
+/* title input styling */
+.text-input{
+  width: 100%;
+  height: 46px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.60);
+  color: #fff;
+
+  font-size: 14px;
+  font-weight: 900;
+  outline: none;
+}
+.text-input::placeholder{ opacity: 0.55; }
+
+/* radio group */
+.radios{
+  display:grid;
+  gap:10px;
+  margin-top: 10px;
+}
+.radio{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size: 14px;
+  font-weight: 900;
+}
+.radio input{ transform: scale(1.25); }
+</style>
+
+<script>
+/* ---------- Embedded Manifest (single-file) ---------- */
+(function embedManifest(){
+  const manifest = {
+    name: "Sports Ticker",
+    short_name: "Ticker",
+    start_url: "./",
+    scope: "./",
+    display: "standalone",
+    background_color: "#000000",
+    theme_color: "#000000",
+    orientation: "landscape",
+    icons: [
+      {
+        src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAHnWj9QAAAABJRU5ErkJggg==",
+        sizes: "192x192",
+        type: "image/png"
+      }
+    ]
+  };
+
+  const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("link");
+  link.rel = "manifest";
+  link.href = url;
+  document.head.appendChild(link);
+})();
+</script>
+
+</head>
+
+<body>
+
+<div class="titleBar" aria-label="Ticker title">
+  <div class="titleText" id="titleText">Sports Ticker</div>
+</div>
+
+<div class="controls" id="controls">
+  <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+</div>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="panel" id="panel" aria-hidden="true">
+  <div class="panel-header">
+    <h2 class="panel-title">Ticker Controls</h2>
+    <button class="close-btn" id="closeBtn" aria-label="Close menu">✕</button>
+  </div>
+
+  <div class="panel-body">
+
+    <!-- TITLE SETTING -->
+    <div class="control">
+      <div class="label-row">
+        <div>Title</div>
+        <div class="value" id="titleVal">Sports Ticker</div>
+      </div>
+      <input class="text-input" id="titleInput" type="text" maxlength="50"
+             placeholder="e.g., Sean's Sports Bar">
+      <div class="small">Saves automatically when you leave the box (or hit Enter).</div>
+    </div>
+
+    <!-- LAYOUT MODE -->
+    <div class="control">
+      <div class="label-row">
+        <div>Layout</div>
+        <div class="value" id="layoutVal">3 lines</div>
+      </div>
+      <div class="radios">
+        <label class="radio"><input type="radio" name="layoutMode" id="modeMulti" value="multi" checked> One line per sport</label>
+        <label class="radio"><input type="radio" name="layoutMode" id="modeSingle" value="single"> Single line (all sports)</label>
+      </div>
+      <div class="small">Single-line mode combines enabled leagues into one continuous ticker.</div>
+    </div>
+
+    <div class="control">
+      <div class="label-row">
+        <div>Halo color</div>
+        <div class="value" id="haloVal">#00ff4c</div>
+      </div>
+      <div class="color-row">
+        <input class="color-input" id="haloColor" type="color" value="#00ff4c">
+        <div class="small">Saved automatically.</div>
+      </div>
+    </div>
+
+    <div class="control">
+      <div class="label-row">
+        <div>Scroll speed (px/sec)</div>
+        <div class="value" id="pxVal">140 px/s</div>
+      </div>
+      <input id="pxRange" type="range" min="60" max="900" step="10" value="140">
+      <div class="small">Constant speed, never tied to number of games.</div>
+    </div>
+
+    <div class="control">
+      <div class="label-row">
+        <div>Text size</div>
+        <div class="value" id="sizeVal">20vw</div>
+      </div>
+      <input id="sizeRange" type="range" min="6" max="30" step="0.5" value="20">
+      <div class="small">Applies to all tickers.</div>
+    </div>
+
+    <div class="control">
+      <div class="label-row">
+        <div>Refresh</div>
+        <div class="value" id="refreshVal">90s</div>
+      </div>
+      <input id="refreshRange" type="range" min="10" max="300" step="5" value="90">
+      <div class="small" id="statusLine">Status: starting…</div>
+      <div class="small" id="logoDebug">Logos: waiting…</div>
+      <div class="small">Fav team: <b>BUF</b> strobes hard (NFL).</div>
+    </div>
+
+    <div class="control">
+      <div class="label-row">
+        <div>Sports shown</div>
+        <div class="value">toggle</div>
+      </div>
+
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="showNHL" checked> NHL</label>
+        <label class="check"><input type="checkbox" id="showNFL" checked> NFL</label>
+        <label class="check"><input type="checkbox" id="showNCAA"> NCAA</label>
+        <label class="check"><input type="checkbox" id="showLogos" checked> Team logos</label>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="applyBtn">Apply</button>
+        <button class="btn" id="resetBtn">Reset</button>
+      </div>
+
+      <div class="small">
+        Tip: Tap the screen once after opening to request fullscreen (helps on tablets).
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MULTI-LINE: THREE NO-GAP tickers -->
+<div class="tickerWrap row1" id="wrapRow1">
+  <div class="tickerTrack" id="trackRow1">
+    <div class="tickerItem" id="itemRow1A"></div>
+    <div class="tickerItem" id="itemRow1B"></div>
+  </div>
+</div>
+
+<div class="tickerWrap row2" id="wrapRow2">
+  <div class="tickerTrack" id="trackRow2">
+    <div class="tickerItem" id="itemRow2A"></div>
+    <div class="tickerItem" id="itemRow2B"></div>
+  </div>
+</div>
+
+<div class="tickerWrap row3" id="wrapRow3">
+  <div class="tickerTrack" id="trackRow3">
+    <div class="tickerItem" id="itemRow3A"></div>
+    <div class="tickerItem" id="itemRow3B"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  function tryFullscreenOnce() {
+    const el = document.documentElement;
+    if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+  }
+  window.addEventListener('touchstart', tryFullscreenOnce, { once: true, passive: true });
+  window.addEventListener('mousedown', tryFullscreenOnce, { once: true });
+
+  const ENDPOINTS = {
+    nhl:  "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard",
+    nfl:  "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+    ncaa: "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard"
+  };
+
+  // ---- Cache/version guard ----
+  const TICKER_CACHE_VER = "layout-v2-titlefix";
+  const LAST_ROW1_KEY = `lastGoodTickerHTML_ROW1_${TICKER_CACHE_VER}`; // NHL
+  const LAST_ROW2_KEY = `lastGoodTickerHTML_ROW2_${TICKER_CACHE_VER}`; // NFL
+  const LAST_ROW3_KEY = `lastGoodTickerHTML_ROW3_${TICKER_CACHE_VER}`; // NCAA
+  const LAST_SINGLE_KEY = `lastGoodTickerHTML_SINGLE_${TICKER_CACHE_VER}`;
+
+  const TITLE_KEY = `tickerTitle_${TICKER_CACHE_VER}`;
+  const DEFAULT_TITLE = "Sports Ticker";
+
+  const LAYOUT_KEY = `tickerLayout_${TICKER_CACHE_VER}`; // "multi"|"single"
+
+  // ---- Favorite team matching (NFL line only) ----
+  const FAV_ABBRS = new Set(["BUF"]);
+  const FAV_MATCH_RE = /\b(BUF|BILLS|BUFFALO)\b/i;
+
+  const root = document.documentElement;
+
+  const controls = document.getElementById('controls');
+  const menuBtn = document.getElementById('menuBtn');
+  const panel = document.getElementById('panel');
+  const scrim = document.getElementById('scrim');
+  const closeBtn = document.getElementById('closeBtn');
+
+  const titleText = document.getElementById('titleText');
+  const titleInput = document.getElementById('titleInput');
+  const titleVal = document.getElementById('titleVal');
+
+  const haloColor = document.getElementById('haloColor');
+  const haloVal = document.getElementById('haloVal');
+
+  const pxRange = document.getElementById('pxRange');
+  const sizeRange  = document.getElementById('sizeRange');
+  const refreshRange = document.getElementById('refreshRange');
+
+  const pxVal = document.getElementById('pxVal');
+  const sizeVal  = document.getElementById('sizeVal');
+  const refreshVal = document.getElementById('refreshVal');
+  const statusLine = document.getElementById('statusLine');
+  const logoDebug = document.getElementById('logoDebug');
+
+  const showNHL = document.getElementById('showNHL');
+  const showNFL = document.getElementById('showNFL');
+  const showNCAA = document.getElementById('showNCAA');
+  const showLogos = document.getElementById('showLogos');
+
+  const modeMulti = document.getElementById('modeMulti');
+  const modeSingle = document.getElementById('modeSingle');
+  const layoutVal = document.getElementById('layoutVal');
+
+  const applyBtn = document.getElementById('applyBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const wrapRow1 = document.getElementById('wrapRow1');
+  const wrapRow2 = document.getElementById('wrapRow2');
+  const wrapRow3 = document.getElementById('wrapRow3');
+
+  // Row 1 (NHL)
+  const trackRow1 = document.getElementById('trackRow1');
+  const itemRow1A = document.getElementById('itemRow1A');
+  const itemRow1B = document.getElementById('itemRow1B');
+
+  // Row 2 (NFL)
+  const trackRow2 = document.getElementById('trackRow2');
+  const itemRow2A = document.getElementById('itemRow2A');
+  const itemRow2B = document.getElementById('itemRow2B');
+
+  // Row 3 (NCAA)
+  const trackRow3 = document.getElementById('trackRow3');
+  const itemRow3A = document.getElementById('itemRow3A');
+  const itemRow3B = document.getElementById('itemRow3B');
+
+  // If images load after HTML is set, width changes -> re-calc durations.
+  function onImgLoadFix(e){
+    const t = e.target;
+    if (t && t.tagName === 'IMG') updateAllDurations();
+  }
+  trackRow1.addEventListener('load', onImgLoadFix, true);
+  trackRow2.addEventListener('load', onImgLoadFix, true);
+  trackRow3.addEventListener('load', onImgLoadFix, true);
+
+  // auto-hide hamburger
+  let hideTimer = null;
+  function showControlsBar() {
+    if (panel.classList.contains('open')) return;
+
+    controls.style.display = "block";
+    controls.classList.add('show');
+
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (!panel.classList.contains('open')) controls.classList.remove('show');
+    }, 2200);
+  }
+  ['mousemove','mousedown','touchstart','touchmove','keydown','wheel'].forEach(evt => {
+    window.addEventListener(evt, showControlsBar, {passive:true});
+  });
+  showControlsBar();
+
+  function openPanel() {
+    panel.classList.add('open');
+    scrim.classList.add('show');
+    clearTimeout(hideTimer);
+
+    controls.classList.remove('show');
+    controls.style.display = "none";
+  }
+  function closePanel() {
+    panel.classList.remove('open');
+    scrim.classList.remove('show');
+
+    controls.style.display = "block";
+    showControlsBar();
+  }
+  menuBtn.addEventListener('click', openPanel);
+  closeBtn.addEventListener('click', closePanel);
+  scrim.addEventListener('click', closePanel);
+
+  // ----- Title helpers (FIXED “wonky” behavior) -----
+  // The “wonky” feel was because setTitle() was running on every keystroke and
+  // rewriting the input value while you type. Now:
+  // - typing does NOT change the input value
+  // - the title preview updates live
+  // - save happens on blur or Enter (or Apply)
+  function sanitizeTitle(s){
+    let t = String(s ?? "").replace(/\s+/g, " ").trim();
+    if (!t) t = DEFAULT_TITLE;
+    if (t.length > 50) t = t.slice(0, 50);
+    return t;
+  }
+  function setTitleUI(clean){
+    titleText.textContent = clean;
+    titleVal.textContent = clean;
+    document.title = clean;
+  }
+  function saveTitleFromInput(){
+    const clean = sanitizeTitle(titleInput.value);
+    titleInput.value = clean;
+    setTitleUI(clean);
+    localStorage.setItem(TITLE_KEY, clean);
+  }
+
+  function getLayoutMode(){
+    return modeSingle.checked ? "single" : "multi";
+  }
+  function setLayoutMode(mode){
+    const m = (mode === "single") ? "single" : "multi";
+    modeSingle.checked = (m === "single");
+    modeMulti.checked = (m === "multi");
+    localStorage.setItem(LAYOUT_KEY, m);
+    layoutVal.textContent = (m === "single") ? "1 line" : "3 lines";
+    applyLayoutVisibility();
+  }
+
+  function applyLayoutVisibility(){
+    const mode = getLayoutMode();
+
+    // Hide any disabled rows entirely (no “Loading …” ghosts).
+    // Also handle single-line case where only row1 is used.
+    if (mode === "single") {
+      wrapRow1.style.display = "block";
+      wrapRow2.style.display = "none";
+      wrapRow3.style.display = "none";
+    } else {
+      wrapRow1.style.display = showNHL.checked ? "block" : "none";
+      wrapRow2.style.display = showNFL.checked ? "block" : "none";
+      wrapRow3.style.display = showNCAA.checked ? "block" : "none";
+    }
+
+    updateAllDurations();
+  }
+
+  function yyyymmdd(d) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${yyyy}${mm}${dd}`;
+  }
+
+  // MM/DD only
+  function formatDateLabel(dateStr) {
+    const mm = Number(dateStr.slice(4,6));
+    const dd = Number(dateStr.slice(6,8));
+    return `${mm}/${String(dd).padStart(2,'0')}`;
+  }
+
+  async function fetchScoreboard(baseUrl, dateStr) {
+    const joiner = baseUrl.includes("?") ? "&" : "?";
+    const url = `${baseUrl}${joiner}dates=${dateStr}&limit=500`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return await res.json();
+  }
+
+  function normalizeLogoUrl(u) {
+    if (!u || typeof u !== "string") return "";
+    let url = u.trim();
+    if (!url) return "";
+    if (url.startsWith("//")) url = "https:" + url;
+    if (url.startsWith("http://")) url = "https://" + url.slice("http://".length);
+    return url;
+  }
+
+  function extractLogoUrl(team, competitor) {
+    const candidates = [];
+
+    if (team) {
+      if (typeof team.logo === "string") candidates.push(team.logo);
+      if (typeof team.logos === "string") candidates.push(team.logos);
+      if (Array.isArray(team.logos)) {
+        for (const l of team.logos) {
+          if (typeof l === "string") candidates.push(l);
+          else if (l && typeof l.href === "string") candidates.push(l.href);
+          else if (l && typeof l.url === "string") candidates.push(l.url);
+        }
+      }
+    }
+
+    if (competitor) {
+      if (typeof competitor.logo === "string") candidates.push(competitor.logo);
+      if (competitor.team) {
+        if (typeof competitor.team.logo === "string") candidates.push(competitor.team.logo);
+        if (Array.isArray(competitor.team.logos)) {
+          for (const l of competitor.team.logos) {
+            if (l && typeof l.href === "string") candidates.push(l.href);
+            else if (l && typeof l.url === "string") candidates.push(l.url);
+          }
+        }
+      }
+    }
+
+    for (const c of candidates) {
+      const n = normalizeLogoUrl(c);
+      if (n.startsWith("https://")) return n;
+      if (n.startsWith("http://")) return normalizeLogoUrl(n);
+    }
+    return "";
+  }
+
+  function normalizeStatus(statusRaw) {
+    if (!statusRaw) return "Scheduled";
+    let s = String(statusRaw);
+
+    s = s.replace(/\s+(ET|EST|EDT)\b/g, "")
+         .replace(/\s+(CT|CST|CDT)\b/g, "")
+         .replace(/\s+(MT|MST|MDT)\b/g, "")
+         .replace(/\s+(PT|PST|PDT)\b/g, "")
+         .trim();
+
+    const timeMatch = s.match(/(\d{1,2}:\d{2}\s*[AP]M)/i);
+    if (timeMatch && /\bat\b/i.test(s)) {
+      return timeMatch[1].toUpperCase().replace(/\s+/g, " ").trim();
+    }
+    if (s.toLowerCase().includes(" at ")) return s.split(/ at /i).pop().trim();
+    return s.trim();
+  }
+
+  function parseScoreboard(data) {
+    const out = [];
+    const events = (data && data.events) ? data.events : [];
+    for (const event of events) {
+      const comp = (event.competitions && event.competitions[0]) ? event.competitions[0] : null;
+      if (!comp) continue;
+
+      const raw = comp.status && comp.status.type ? (comp.status.type.shortDetail || "Scheduled") : "Scheduled";
+      const status = normalizeStatus(raw);
+
+      let home = null, away = null;
+      for (const c of (comp.competitors || [])) {
+        if (c.homeAway === "home") home = c;
+        if (c.homeAway === "away") away = c;
+      }
+      if (!home || !away) continue;
+
+      const homeTeam = home.team || {};
+      const awayTeam = away.team || {};
+
+      const homeAbbr = (homeTeam.abbreviation || homeTeam.shortDisplayName || homeTeam.displayName) || "HOME";
+      const awayAbbr = (awayTeam.abbreviation || awayTeam.shortDisplayName || awayTeam.displayName) || "AWAY";
+
+      const homeName = (homeTeam.displayName || homeTeam.shortDisplayName || homeAbbr) || homeAbbr;
+      const awayName = (awayTeam.displayName || awayTeam.shortDisplayName || awayAbbr) || awayAbbr;
+
+      out.push({
+        away: awayAbbr,
+        away_name: awayName,
+        away_score: away.score ?? "0",
+        away_logo: extractLogoUrl(awayTeam, away),
+
+        home: homeAbbr,
+        home_name: homeName,
+        home_score: home.score ?? "0",
+        home_logo: extractLogoUrl(homeTeam, home),
+
+        status
+      });
+    }
+    return out;
+  }
+
+  function logoHtml(url, alt) {
+    if (!url || !showLogos.checked) return "";
+    return `<img class="teamLogo"
+                 src="${url}"
+                 alt="${(alt || "").replace(/"/g,'')}"
+                 loading="lazy"
+                 decoding="async"
+                 referrerpolicy="no-referrer"
+                 crossorigin="anonymous"
+                 onerror="this.style.display='none'">`;
+  }
+
+  function isFav(teamAbbr, teamName) {
+    const a = String(teamAbbr || "").toUpperCase().trim();
+    const n = String(teamName || "");
+    return FAV_ABBRS.has(a) || FAV_MATCH_RE.test(a) || FAV_MATCH_RE.test(n);
+  }
+
+  function maybeStrobe(teamAbbr, teamName, innerHtml, enableStrobe) {
+    if (!enableStrobe) return innerHtml;
+    if (!isFav(teamAbbr, teamName)) return innerHtml;
+    return `<span class="favStrobe">${innerHtml}</span>`;
+  }
+
+  function buildLeagueLine(label, games, maxGames, enableFavStrobe) {
+    if (!games || games.length === 0) return "";
+    const parts = [];
+    parts.push(label + " |");
+    const slice = games.slice(0, maxGames);
+
+    for (const g of slice) {
+      const awayToken = maybeStrobe(
+        g.away, g.away_name,
+        `${logoHtml(g.away_logo, g.away)}${g.away}`,
+        enableFavStrobe
+      );
+      const homeToken = maybeStrobe(
+        g.home, g.home_name,
+        `${logoHtml(g.home_logo, g.home)}${g.home}`,
+        enableFavStrobe
+      );
+
+      parts.push(
+  `${awayToken} ${g.away_score} ` +
+  `${homeToken} ${g.home_score} ` +
+  `(${g.status}) <span class="divider">•</span>`
+);
+    }
+    if (games.length > slice.length) parts.push(`+${games.length - slice.length} more |`);
+    return parts.join(" ");
+  }
+
+  // Standard behavior (NHL/NFL): today if games exist, else yesterday
+  async function getLeagueWithFallback(baseUrl) {
+    const now = new Date();
+    const today = yyyymmdd(now);
+    const yest = yyyymmdd(new Date(now.getTime() - 24*60*60*1000));
+
+    const d1 = await fetchScoreboard(baseUrl, today);
+    const g1 = parseScoreboard(d1);
+    if (g1.length) return {games: g1, date: today};
+
+    const d2 = await fetchScoreboard(baseUrl, yest);
+    const g2 = parseScoreboard(d2);
+    return {games: g2, date: yest};
+  }
+
+  // NCAA: today + yesterday (both)
+  async function getNcaaTodayAndYesterday(baseUrl) {
+    const now = new Date();
+    const today = yyyymmdd(now);
+    const yest = yyyymmdd(new Date(now.getTime() - 24*60*60*1000));
+
+    const [d1, d2] = await Promise.all([
+      fetchScoreboard(baseUrl, today),
+      fetchScoreboard(baseUrl, yest),
+    ]);
+
+    const g1 = parseScoreboard(d1);
+    const g2 = parseScoreboard(d2);
+
+    const label = `${formatDateLabel(today)}+${formatDateLabel(yest)}`;
+    const games = [...g2, ...g1];
+    return { games, dateLabel: label };
+  }
+
+  async function safeLeague(name, baseUrl) {
+    try {
+      const r = await getLeagueWithFallback(baseUrl);
+      return { ok: true, name, ...r };
+    } catch (e) {
+      return { ok: false, name, error: e };
+    }
+  }
+
+  async function safeNcaa(baseUrl) {
+    try {
+      const r = await getNcaaTodayAndYesterday(baseUrl);
+      return { ok: true, name: "NCAA", ...r };
+    } catch (e) {
+      return { ok: false, name: "NCAA", error: e };
+    }
+  }
+
+  // ---- NO-GAP mechanics (3 rows) ----
+  let pendingRow1 = null, pendingRow2 = null, pendingRow3 = null;
+
+  function setRowHTMLNow(row, html) {
+    const safe = (html && String(html).trim()) ? html : "";
+    if (row === 1) {
+      itemRow1A.innerHTML = safe; itemRow1B.innerHTML = safe;
+      if (safe) localStorage.setItem(LAST_ROW1_KEY, safe);
+      updateDurationForRow1();
+    } else if (row === 2) {
+      itemRow2A.innerHTML = safe; itemRow2B.innerHTML = safe;
+      if (safe) localStorage.setItem(LAST_ROW2_KEY, safe);
+      updateDurationForRow2();
+    } else {
+      itemRow3A.innerHTML = safe; itemRow3B.innerHTML = safe;
+      if (safe) localStorage.setItem(LAST_ROW3_KEY, safe);
+      updateDurationForRow3();
+    }
+  }
+
+  trackRow1.addEventListener('animationiteration', () => { if (pendingRow1 !== null) { setRowHTMLNow(1, pendingRow1); pendingRow1 = null; }});
+  trackRow2.addEventListener('animationiteration', () => { if (pendingRow2 !== null) { setRowHTMLNow(2, pendingRow2); pendingRow2 = null; }});
+  trackRow3.addEventListener('animationiteration', () => { if (pendingRow3 !== null) { setRowHTMLNow(3, pendingRow3); pendingRow3 = null; }});
+
+  function updateDurationForRow1() {
+    requestAnimationFrame(() => {
+      const pxPerSec = Number(pxRange.value || 140);
+      const oneWidth = itemRow1A.scrollWidth || 1000;
+      const duration = Math.max(5, oneWidth / Math.max(10, pxPerSec));
+      trackRow1.style.animationDuration = duration.toFixed(2) + "s";
+    });
+  }
+  function updateDurationForRow2() {
+    requestAnimationFrame(() => {
+      const pxPerSec = Number(pxRange.value || 140);
+      const oneWidth = itemRow2A.scrollWidth || 1000;
+      const duration = Math.max(5, oneWidth / Math.max(10, pxPerSec));
+      trackRow2.style.animationDuration = duration.toFixed(2) + "s";
+    });
+  }
+  function updateDurationForRow3() {
+    requestAnimationFrame(() => {
+      const pxPerSec = Number(pxRange.value || 140);
+      const oneWidth = itemRow3A.scrollWidth || 1000;
+      const duration = Math.max(5, oneWidth / Math.max(10, pxPerSec));
+      trackRow3.style.animationDuration = duration.toFixed(2) + "s";
+    });
+  }
+  function updateAllDurations() {
+    updateDurationForRow1();
+    updateDurationForRow2();
+    updateDurationForRow3();
+  }
+
+  function setHalo(color) {
+    root.style.setProperty('--halo', color);
+    haloVal.textContent = color.toLowerCase();
+    localStorage.setItem('tickerHalo', color);
+  }
+
+  function setPxPerSec(px) {
+    pxVal.textContent = `${px} px/s`;
+    localStorage.setItem('tickerPxPerSec', String(px));
+    updateAllDurations();
+  }
+
+  function setSize(vw) {
+    root.style.setProperty('--size', vw + 'vw');
+    sizeVal.textContent = vw + 'vw';
+    localStorage.setItem('tickerSizeVw', String(vw));
+    updateAllDurations();
+  }
+
+  function setRefresh(sec) {
+    refreshVal.textContent = sec + 's';
+    localStorage.setItem('tickerRefreshSec', String(sec));
+  }
+
+  // Combine enabled league lines into one (single-line mode)
+  function combineLines(lines){
+    const clean = lines.filter(x => x && String(x).trim());
+    return clean.join("  ▪  ");
+  }
+
+  async function updateTicker() {
+    statusLine.textContent = "Status: fetching…";
+    logoDebug.textContent = "Logos: checking…";
+
+    const want = {
+      nhl:  !!showNHL.checked,
+      nfl:  !!showNFL.checked,
+      ncaa: !!showNCAA.checked
+    };
+
+    applyLayoutVisibility(); // hide/show wraps right away
+
+    const [nhl, nfl, ncaa] = await Promise.all([
+      want.nhl  ? safeLeague("NHL",  ENDPOINTS.nhl)  : Promise.resolve({ok:false,skipped:true}),
+      want.nfl  ? safeLeague("NFL",  ENDPOINTS.nfl)  : Promise.resolve({ok:false,skipped:true}),
+      want.ncaa ? safeNcaa(ENDPOINTS.ncaa)           : Promise.resolve({ok:false,skipped:true})
+    ]);
+
+    const rowNHL = (want.nhl && nhl.ok)
+      ? buildLeagueLine(`NHL (${formatDateLabel(nhl.date)})`, nhl.games, 12, false)
+      : (want.nhl ? (localStorage.getItem(LAST_ROW1_KEY) || "No NHL games found for today/yesterday.") : "");
+
+    const rowNFL = (want.nfl && nfl.ok)
+      ? buildLeagueLine(`NFL (${formatDateLabel(nfl.date)})`, nfl.games, 14, true)
+      : (want.nfl ? (localStorage.getItem(LAST_ROW2_KEY) || "No NFL games found for today/yesterday.") : "");
+
+    const rowNCAA = (want.ncaa && ncaa.ok)
+      ? buildLeagueLine(`NCAA (${ncaa.dateLabel})`, ncaa.games, 18, false)
+      : (want.ncaa ? (localStorage.getItem(LAST_ROW3_KEY) || "No NCAA games found for today/yesterday.") : "");
+
+    // logo debug (keep NFL sample)
+    if (want.nfl && nfl && nfl.ok) {
+      const g = nfl.games || [];
+      let found = 0;
+      let sample = "";
+      for (const gg of g) {
+        if (gg.home_logo) { found++; sample = sample || gg.home_logo; }
+        if (gg.away_logo) { found++; sample = sample || gg.away_logo; }
+      }
+      logoDebug.textContent = `Logos: NFL found=${found} (sample: ${sample ? sample.slice(0,70) + "…" : "none"})`;
+    } else {
+      logoDebug.textContent = `Logos: NFL not available right now`;
+    }
+
+    const mode = getLayoutMode();
+
+    if (mode === "single") {
+      const combined = combineLines([rowNHL, rowNFL, rowNCAA]) || (localStorage.getItem(LAST_SINGLE_KEY) || "No leagues enabled.");
+      localStorage.setItem(LAST_SINGLE_KEY, combined);
+      pendingRow1 = combined;
+      pendingRow2 = ""; // unused
+      pendingRow3 = ""; // unused
+    } else {
+      // Only set pending for enabled leagues; disabled rows stay hidden and blank.
+      pendingRow1 = want.nhl ? rowNHL : "";
+      pendingRow2 = want.nfl ? rowNFL : "";
+      pendingRow3 = want.ncaa ? rowNCAA : "";
+    }
+
+    const enabledCount = Object.values(want).filter(Boolean).length;
+    const okCount = [nhl, nfl, ncaa].filter(x => x.ok).length;
+    statusLine.textContent = `Status: updated ${new Date().toLocaleTimeString()} (ok: ${okCount}/${enabledCount})`;
+  }
+
+  let timer = null;
+  function restartTimer() {
+    if (timer) clearInterval(timer);
+    const sec = Number(refreshRange.value || 90);
+    timer = setInterval(updateTicker, sec * 1000);
+  }
+
+  function applySettings() {
+    setHalo(String(haloColor.value || "#00ff4c"));
+    setPxPerSec(Number(pxRange.value || 140));
+    setSize(Number(sizeRange.value || 20));
+    setRefresh(Number(refreshRange.value || 90));
+
+    saveTitleFromInput();
+    setLayoutMode(getLayoutMode());
+
+    localStorage.setItem("showNHL", showNHL.checked ? "1" : "0");
+    localStorage.setItem("showNFL", showNFL.checked ? "1" : "0");
+    localStorage.setItem("showNCAA", showNCAA.checked ? "1" : "0");
+    localStorage.setItem("showLogos", showLogos.checked ? "1" : "0");
+
+    applyLayoutVisibility();
+    updateTicker();
+    restartTimer();
+  }
+
+  // Load saved settings
+  const savedTitle = localStorage.getItem(TITLE_KEY) || DEFAULT_TITLE;
+  titleInput.value = savedTitle;
+  setTitleUI(sanitizeTitle(savedTitle));
+  titleVal.textContent = sanitizeTitle(savedTitle);
+
+  const savedLayout = localStorage.getItem(LAYOUT_KEY) || "multi";
+  setLayoutMode(savedLayout);
+
+  const savedHalo = localStorage.getItem('tickerHalo');
+  if (savedHalo) haloColor.value = savedHalo;
+
+  const savedPx = localStorage.getItem('tickerPxPerSec');
+  const savedSize  = localStorage.getItem('tickerSizeVw');
+  const savedRefresh = localStorage.getItem('tickerRefreshSec');
+  if (savedPx) pxRange.value = savedPx;
+  if (savedSize) sizeRange.value = savedSize;
+  if (savedRefresh) refreshRange.value = savedRefresh;
+
+  const savedShowNHL = localStorage.getItem("showNHL");
+  const savedShowNFL = localStorage.getItem("showNFL");
+  const savedShowNCAA = localStorage.getItem("showNCAA");
+  const savedShowLogos = localStorage.getItem("showLogos");
+  if (savedShowNHL !== null) showNHL.checked = savedShowNHL === "1";
+  if (savedShowNFL !== null) showNFL.checked = savedShowNFL === "1";
+  if (savedShowNCAA !== null) showNCAA.checked = savedShowNCAA === "1";
+  if (savedShowLogos !== null) showLogos.checked = savedShowLogos === "1";
+
+  // events
+  haloColor.addEventListener('input', () => setHalo(String(haloColor.value)));
+  pxRange.addEventListener('input', () => setPxPerSec(Number(pxRange.value)));
+  sizeRange.addEventListener('input', () => setSize(Number(sizeRange.value)));
+  refreshRange.addEventListener('input', () => { setRefresh(Number(refreshRange.value)); restartTimer(); });
+
+  // Title input: live preview only (no rewriting input), save on blur/enter
+  titleInput.addEventListener('input', () => setTitleUI(sanitizeTitle(titleInput.value)));
+  titleInput.addEventListener('blur', saveTitleFromInput);
+  titleInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveTitleFromInput(); applySettings(); }
+  });
+
+  // layout mode changes
+  [modeMulti, modeSingle].forEach(r => r.addEventListener('change', () => {
+    setLayoutMode(getLayoutMode());
+    applySettings();
+  }));
+
+  // When toggling sports, hide/show rows instantly and don’t show “Loading …” for disabled ones
+  [showNHL, showNFL, showNCAA].forEach(cb => cb.addEventListener('change', () => {
+    applyLayoutVisibility();
+    applySettings();
+  }));
+
+  showLogos.addEventListener('change', applySettings);
+
+  applyBtn.addEventListener('click', applySettings);
+
+  resetBtn.addEventListener('click', () => {
+    localStorage.clear();
+    pxRange.value = 140;
+    sizeRange.value = 20;
+    refreshRange.value = 90;
+    showNHL.checked = true;
+    showNFL.checked = true;
+    showNCAA.checked = false;
+    showLogos.checked = true;
+    haloColor.value = "#00ff4c";
+    titleInput.value = DEFAULT_TITLE;
+    setTitleUI(DEFAULT_TITLE);
+    setLayoutMode("multi");
+    applySettings();
+  });
+
+  window.addEventListener('resize', updateAllDurations);
+
+  // initial content: use cached, but ONLY for enabled sports; otherwise blank.
+  // Also: no “Loading …” placeholders anymore.
+  itemRow1A.innerHTML = localStorage.getItem(LAST_ROW1_KEY) || "";
+  itemRow1B.innerHTML = localStorage.getItem(LAST_ROW1_KEY) || "";
+  itemRow2A.innerHTML = localStorage.getItem(LAST_ROW2_KEY) || "";
+  itemRow2B.innerHTML = localStorage.getItem(LAST_ROW2_KEY) || "";
+  itemRow3A.innerHTML = localStorage.getItem(LAST_ROW3_KEY) || "";
+  itemRow3B.innerHTML = localStorage.getItem(LAST_ROW3_KEY) || "";
+
+  // kick off
+  setHalo(String(haloColor.value || "#00ff4c"));
+  pxVal.textContent = `${pxRange.value} px/s`;
+  sizeVal.textContent = `${sizeRange.value}vw`;
+  refreshVal.textContent = `${refreshRange.value}s`;
+
+  applyLayoutVisibility();
+  updateAllDurations();
+  applySettings();
+})();
+</script>
+
+</body>
+</html>
